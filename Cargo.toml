@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 rocket = "0.5"
+rusqlite = { version = "0.30", features = ["bundled"] }
