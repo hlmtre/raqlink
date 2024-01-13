@@ -26,10 +26,13 @@ impl ShortUrl<'_> {
         format!("{}", &self.0.to_string())
     }
 
-    pub fn from_string(&mut self, short_url: String) -> &ShortUrl {
-        self.0 = std::borrow::Cow::Borrowed(short_url.as_str());
-        self
+    /*
+    pub fn from_string(f: String) -> Result<Self> {
+        let mut s = ShortUrl::new(SHORT_URL_LEN);
+        s.0 = f.into();
+        Ok(s)
     }
+    */
 }
 
 #[derive(Debug, Default)]
@@ -50,6 +53,7 @@ pub(crate) fn retrieve(short_url: String) -> Result<String> {
     })?;
 
     for u in urls_iter {
+        // we should return here whenever we have a url
         return Ok(u.unwrap().orig_url);
     }
     Ok("foo".to_string())
@@ -81,10 +85,11 @@ pub(crate) fn new(orig_url: String) -> Result<String> {
     let urls_iter = stmt.query_map(&[(":orig_url", orig_url.as_str())], |row| {
         Ok(Url {
             short_url: ShortUrl::default(),
-            orig_url: "".to_string(),
+            orig_url: row.get(0)?,
         })
     })?;
 
+    // if the orig_url already exists in the db, return just that short_url
     for u in urls_iter {
         return Ok(u.unwrap().orig_url);
     }
