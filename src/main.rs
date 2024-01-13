@@ -18,9 +18,7 @@ fn new(orig_url: String) -> String {
 */
 #[get("/<short_url>")]
 fn retrieve(short_url: String) -> Redirect {
-    let u = url::retrieve(short_url);
-    eprintln!("{:?}", u);
-    Redirect::to(u.unwrap())
+    Redirect::to(url::retrieve(short_url).unwrap())
 }
 
 #[get("/error")]
