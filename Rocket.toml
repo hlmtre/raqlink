@@ -3,3 +3,6 @@ address = "192.168.6.151"
 
 [debug]
 port = 8192
+
+[release]
+port = 8192

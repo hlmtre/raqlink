@@ -3,9 +3,8 @@ extern crate rocket;
 mod url;
 
 use rocket::response::Redirect;
-use rusqlite::Error;
 
-const HOST_PREFIX: &str = "http://192.168.6.151:8192/";
+const HOST_PREFIX: &str = "https://u.aql.ink/";
 
 #[post("/new", data = "<orig_url>")]
 fn new(orig_url: String) -> String {
@@ -26,11 +25,6 @@ fn uh_oh() -> String {
     format!("{}", "500")
 }
 
-#[get("/redirect")]
-fn redirect() {
-    Redirect::to("/error");
-}
-
 #[launch]
 fn rocket() -> _ {
     let f = url::create_tables();
@@ -41,5 +35,5 @@ fn rocket() -> _ {
             Redirect::to("/error");
         }
     };
-    rocket::build().mount("/", routes![retrieve, new, uh_oh, redirect])
+    rocket::build().mount("/", routes![retrieve, new, uh_oh])
 }

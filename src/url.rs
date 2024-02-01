@@ -1,6 +1,5 @@
 extern crate rusqlite;
 use rand::{self, Rng};
-use rocket::response::Redirect;
 use std::borrow::Cow;
 
 use rusqlite::{Connection, Result};
@@ -56,7 +55,7 @@ pub(crate) fn retrieve(short_url: String) -> Result<String> {
         // we should return here whenever we have a url
         return Ok(u.unwrap().orig_url);
     }
-    Ok("foo".to_string())
+    Ok("https://letmegooglethat.com/?q=404".to_string())
 }
 
 pub(crate) fn create_tables() -> Result<()> {
