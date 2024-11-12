@@ -9,17 +9,19 @@ const SHORT_URL_LEN: usize = 6;
 #[derive(Debug, Default)]
 pub struct ShortUrl<'a>(Cow<'a, str>);
 
+fn gen_random_string(size: usize) -> String {
+    const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    let mut id = String::with_capacity(size);
+    let mut rng = rand::thread_rng();
+    for _ in 0..size {
+        id.push(BASE62[rng.gen::<usize>() % 62] as char);
+    }
+    id
+}
+
 impl ShortUrl<'_> {
     pub fn new(size: usize) -> ShortUrl<'static> {
-        const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
-        let mut id = String::with_capacity(size);
-        let mut rng = rand::thread_rng();
-        for _ in 0..size {
-            id.push(BASE62[rng.gen::<usize>() % 62] as char);
-        }
-
-        ShortUrl(Cow::Owned(id))
+        ShortUrl(Cow::Owned(gen_random_string(size)))
     }
     pub fn to_string(&self) -> String {
         format!("{}", &self.0.to_string())
@@ -40,8 +42,14 @@ struct Url<'a> {
     short_url: ShortUrl<'a>,
 }
 
+#[derive(Debug, Default)]
+struct Img {
+    id: i32,
+    data: Option<Vec<u8>>,
+}
+
 pub(crate) fn retrieve(short_url: String) -> Result<String> {
-    let conn = Connection::open("aqlink.db")?;
+    let conn = Connection::open("aqlink-testing.db")?;
 
     let mut stmt = conn.prepare("SELECT orig_url FROM urls WHERE short_url=:short_url LIMIT 1")?;
     let urls_iter = stmt.query_map(&[(":short_url", short_url.as_str())], |row| {
@@ -59,16 +67,29 @@ pub(crate) fn retrieve(short_url: String) -> Result<String> {
 }
 
 pub(crate) fn create_tables() -> Result<()> {
-    let conn = Connection::open("aqlink.db")?;
+    let conn = Connection::open("aqlink-testing.db")?;
 
-    conn.execute(
+    conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS urls (
         orig_url text primary key,
-        short_url text)",
-        (),
+        short_url text);
+              CREATE TABLE IF NOT EXISTS imgs (
+        id INTEGER PRIMARY KEY,
+        img BLOB
+        )",
     )?;
 
     Ok(())
+}
+
+pub(crate) fn new_img(image: Option<Vec<u8>>) -> Result<i64> {
+    let ni = Img { data: image, id: 0 };
+    let conn = Connection::open("aqlink-testing.db")?;
+    conn.execute(
+        "INSERT INTO imgs (img, id) VALUES (?1, ?2)",
+        (&ni.data, &ni.id),
+    )?;
+    Ok(conn.last_insert_rowid())
 }
 
 pub(crate) fn new(orig_url: String) -> Result<String> {
@@ -78,7 +99,7 @@ pub(crate) fn new(orig_url: String) -> Result<String> {
         short_url,
     };
 
-    let conn = Connection::open("aqlink.db")?;
+    let conn = Connection::open("aqlink-testing.db")?;
 
     let mut stmt = conn.prepare("SELECT short_url FROM urls WHERE orig_url=:orig_url LIMIT 1")?;
     let urls_iter = stmt.query_map(&[(":orig_url", orig_url.as_str())], |row| {

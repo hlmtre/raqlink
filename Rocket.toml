@@ -2,7 +2,8 @@
 address = "192.168.6.151"
 
 [debug]
-port = 8192
+port = 8193
 
 [release]
 port = 8192
+log_level = "normal"

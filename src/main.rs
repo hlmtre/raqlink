@@ -11,6 +11,11 @@ fn new(orig_url: String) -> String {
     HOST_PREFIX.to_string() + url::new(orig_url).unwrap().as_str()
 }
 
+#[post("/new_image", data = "<file>")]
+fn new_image(file: Option<Vec<u8>>) -> String {
+    HOST_PREFIX.to_string() + url::new_img(file).unwrap().to_string().as_str()
+}
+
 /*
   IF YOU WANT IT TO REDIRECT *TO* SOMEWHERE, THE FUNCTION'S RETURN TYPE
   HAS TO BE A REDIRECT
@@ -22,7 +27,7 @@ fn retrieve(short_url: String) -> Redirect {
 
 #[get("/error")]
 fn uh_oh() -> String {
-    format!("{}", "500")
+    "500".to_string()
 }
 
 #[launch]
@@ -35,5 +40,5 @@ fn rocket() -> _ {
             Redirect::to("/error");
         }
     };
-    rocket::build().mount("/", routes![retrieve, new, uh_oh])
+    rocket::build().mount("/", routes![retrieve, new, new_image, uh_oh])
 }
