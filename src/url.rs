@@ -2,10 +2,12 @@ extern crate rusqlite;
 use crate::Upload;
 use rand::{self, Rng};
 use rocket::form::Form;
+use rocket::fs::TempFile;
 use std::borrow::Cow;
 
 use rusqlite::{Connection, Result};
 
+const SAVE_LOCATION: &str = "./images/";
 const SHORT_URL_LEN: usize = 6;
 
 #[derive(Debug, Default)]
@@ -87,21 +89,24 @@ pub(crate) fn create_tables() -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn new_img(image: Form<Upload>) -> Result<String> {
-    let ni = Img {
-        data: image.data.clone(),
-        uuid: gen_random_string(SHORT_URL_LEN),
-        filetype: ".png".to_string(),
-    };
-    println!("form.file = {:?}", ni.data);
+pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
     /*
+    eprintln!("form: {:?}", image);
+    println!("ni = {:?}", ni);
     let conn = Connection::open("aqlink-testing.db")?;
     conn.execute(
         "INSERT INTO imgs (img, uuid, filetype) VALUES (?1, ?2, ?3)",
         (&ni.data, &ni.uuid, &ni.filetype),
     )?;
+    let ni = Img {
+        data: image,
+        uuid: gen_random_string(SHORT_URL_LEN),
+        filetype: ".png".to_string(),
+    };
     */
-    let filename = ni.uuid + ni.filetype.as_str();
+    let id = gen_random_string(SHORT_URL_LEN);
+    let filename = String::from(SAVE_LOCATION) + &id;
+    let _ = form.image.move_copy_to(filename.clone()).await;
     Ok(filename)
 }
 

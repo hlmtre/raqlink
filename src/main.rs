@@ -3,14 +3,15 @@ extern crate rocket;
 mod url;
 
 use rocket::form::Form;
+use rocket::fs::TempFile;
 use rocket::response::Redirect;
 
 const HOST_PREFIX: &str = "https://u.aql.ink/";
 const IMG_HOST_PREFIX: &str = "https://i.aql.ink/";
 
-#[derive(FromForm)]
-pub(crate) struct Upload {
-    data: Option<Vec<u8>>,
+#[derive(FromForm, Debug)]
+pub(crate) struct Upload<'r> {
+    image: TempFile<'r>,
 }
 
 #[post("/new", data = "<orig_url>")]
@@ -19,8 +20,9 @@ fn new(orig_url: String) -> String {
 }
 
 #[post("/new_image", data = "<upload>")]
-fn new_image(upload: Form<Upload>) -> String {
-    IMG_HOST_PREFIX.to_string() + url::new_img(upload).unwrap().to_string().as_str()
+async fn new_image(upload: Form<Upload<'_>>) -> String {
+    //eprintln!("form: {:?}", upload);
+    url::new_img(upload).await.unwrap().to_string()
 }
 
 /*
