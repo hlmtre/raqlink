@@ -1,5 +1,7 @@
 extern crate rusqlite;
+use crate::Upload;
 use rand::{self, Rng};
+use rocket::form::Form;
 use std::borrow::Cow;
 
 use rusqlite::{Connection, Result};
@@ -24,7 +26,7 @@ impl ShortUrl<'_> {
         ShortUrl(Cow::Owned(gen_random_string(size)))
     }
     pub fn to_string(&self) -> String {
-        format!("{}", &self.0.to_string())
+        self.0.to_string().to_string()
     }
 
     /*
@@ -44,7 +46,8 @@ struct Url<'a> {
 
 #[derive(Debug, Default)]
 struct Img {
-    id: i32,
+    uuid: String,
+    filetype: String,
     data: Option<Vec<u8>>,
 }
 
@@ -75,6 +78,8 @@ pub(crate) fn create_tables() -> Result<()> {
         short_url text);
               CREATE TABLE IF NOT EXISTS imgs (
         id INTEGER PRIMARY KEY,
+        uuid TEXT,
+        filetype TEXT,
         img BLOB
         )",
     )?;
@@ -82,14 +87,22 @@ pub(crate) fn create_tables() -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn new_img(image: Option<Vec<u8>>) -> Result<i64> {
-    let ni = Img { data: image, id: 0 };
+pub(crate) fn new_img(image: Form<Upload>) -> Result<String> {
+    let ni = Img {
+        data: image.data.clone(),
+        uuid: gen_random_string(SHORT_URL_LEN),
+        filetype: ".png".to_string(),
+    };
+    println!("form.file = {:?}", ni.data);
+    /*
     let conn = Connection::open("aqlink-testing.db")?;
     conn.execute(
-        "INSERT INTO imgs (img, id) VALUES (?1, ?2)",
-        (&ni.data, &ni.id),
+        "INSERT INTO imgs (img, uuid, filetype) VALUES (?1, ?2, ?3)",
+        (&ni.data, &ni.uuid, &ni.filetype),
     )?;
-    Ok(conn.last_insert_rowid())
+    */
+    let filename = ni.uuid + ni.filetype.as_str();
+    Ok(filename)
 }
 
 pub(crate) fn new(orig_url: String) -> Result<String> {
