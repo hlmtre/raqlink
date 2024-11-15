@@ -90,24 +90,35 @@ pub(crate) fn create_tables() -> Result<()> {
 }
 
 pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
+    eprintln!("image: {:?}", form.image);
     /*
-    eprintln!("form: {:?}", image);
     println!("ni = {:?}", ni);
+    */
+    let id = gen_random_string(SHORT_URL_LEN);
+    let filename = String::from(SAVE_LOCATION) + &id;
+    let ctype = form.image.content_type();
+
+    let i = read_file_to_bytes(form.image.path().unwrap().to_str().unwrap()).unwrap();
+    eprintln!("i: {:?}", i);
+
+    let ni = Img {
+        data: Some(i),
+        uuid: gen_random_string(SHORT_URL_LEN),
+        filetype: ctype.unwrap().to_string(),
+    };
+
     let conn = Connection::open("aqlink-testing.db")?;
     conn.execute(
         "INSERT INTO imgs (img, uuid, filetype) VALUES (?1, ?2, ?3)",
         (&ni.data, &ni.uuid, &ni.filetype),
     )?;
-    let ni = Img {
-        data: image,
-        uuid: gen_random_string(SHORT_URL_LEN),
-        filetype: ".png".to_string(),
-    };
-    */
-    let id = gen_random_string(SHORT_URL_LEN);
-    let filename = String::from(SAVE_LOCATION) + &id;
     let _ = form.image.move_copy_to(filename.clone()).await;
     Ok(filename)
+}
+
+fn read_file_to_bytes(path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let byte_content = std::fs::read(path)?;
+    Ok(byte_content)
 }
 
 pub(crate) fn new(orig_url: String) -> Result<String> {
