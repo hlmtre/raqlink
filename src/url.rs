@@ -3,7 +3,7 @@ use crate::Upload;
 use rand::{self, Rng};
 use rocket::form::Form;
 use rocket::fs::TempFile;
-use std::borrow::Cow;
+use std::{borrow::Cow, path::Path};
 
 use rusqlite::{Connection, Result};
 
@@ -46,7 +46,7 @@ struct Url<'a> {
     short_url: ShortUrl<'a>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct Img {
     uuid: String,
     filetype: String,
@@ -67,6 +67,34 @@ pub(crate) fn retrieve(short_url: String) -> Result<String> {
     for u in urls_iter {
         // we should return here whenever we have a url
         return Ok(u.unwrap().orig_url);
+    }
+    Ok("https://letmegooglethat.com/?q=404".to_string())
+}
+
+pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
+    eprintln!("got uuid {:?}", uuid);
+    let uuid_as_path = Path::new(&uuid);
+    let f_without_extension = uuid_as_path
+        .file_stem()
+        .unwrap()
+        .to_string_lossy()
+        .to_string()
+        .clone();
+    eprintln!("f without extension: {:?}", f_without_extension);
+    let conn = Connection::open("aqlink-testing.db")?;
+    let mut stmt = conn
+        .prepare("SELECT uuid, filetype, img FROM imgs WHERE uuid=:f_without_extension LIMIT 1")?;
+    let imgs_iter = stmt.query_map(&[(":f_without_extension", f_without_extension)], |row| {
+        Ok(Img {
+            uuid: row.get(0)?,
+            filetype: row.get(1)?,
+            data: row.get(2)?,
+        })
+    })?;
+    for i in imgs_iter {
+        let x = i.unwrap().uuid.to_owned() + &file_extension("image/jpeg");
+        eprintln!("x: {:?}", x);
+        return Ok(x);
     }
     Ok("https://letmegooglethat.com/?q=404".to_string())
 }
@@ -99,7 +127,7 @@ pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
     let ctype = form.image.content_type();
 
     let i = read_file_to_bytes(form.image.path().unwrap().to_str().unwrap()).unwrap();
-    eprintln!("i: {:?}", i);
+    //eprintln!("i: {:?}", i);
 
     let ni = Img {
         data: Some(i),
@@ -113,7 +141,15 @@ pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
         (&ni.data, &ni.uuid, &ni.filetype),
     )?;
     let _ = form.image.move_copy_to(filename.clone()).await;
-    Ok(filename)
+    Ok(ni.uuid + &file_extension(&ni.filetype))
+}
+
+fn file_extension(c: &str) -> String {
+    match c {
+        "image/jpeg" => ".jpg".to_string(),
+        "image/png" => ".png".to_string(),
+        _ => ".png".to_string(),
+    }
 }
 
 fn read_file_to_bytes(path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {

@@ -7,7 +7,7 @@ use rocket::fs::TempFile;
 use rocket::response::Redirect;
 
 const HOST_PREFIX: &str = "https://u.aql.ink/";
-const IMG_HOST_PREFIX: &str = "https://i.aql.ink/";
+const IMG_HOST_PREFIX: &str = "https://u.aql.ink/i/";
 
 #[derive(FromForm, Debug)]
 pub(crate) struct Upload<'r> {
@@ -22,13 +22,18 @@ fn new(orig_url: String) -> String {
 #[post("/new_image", data = "<upload>")]
 async fn new_image(upload: Form<Upload<'_>>) -> String {
     //eprintln!("form: {:?}", upload);
-    url::new_img(upload).await.unwrap().to_string()
+    HOST_PREFIX.to_owned() + &url::new_img(upload).await.unwrap()
 }
 
 /*
   IF YOU WANT IT TO REDIRECT *TO* SOMEWHERE, THE FUNCTION'S RETURN TYPE
   HAS TO BE A REDIRECT
 */
+#[get("/i/<uuid>")]
+fn retrieve_img(uuid: String) -> Redirect {
+    Redirect::to(url::retrieve_img(uuid).unwrap())
+}
+
 #[get("/<short_url>")]
 fn retrieve(short_url: String) -> Redirect {
     Redirect::to(url::retrieve(short_url).unwrap())
@@ -49,5 +54,5 @@ fn rocket() -> _ {
             Redirect::to("/error");
         }
     };
-    rocket::build().mount("/", routes![retrieve, new, new_image, uh_oh])
+    rocket::build().mount("/", routes![retrieve, retrieve_img, new, new_image, uh_oh])
 }
