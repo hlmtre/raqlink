@@ -22,7 +22,7 @@ fn new(orig_url: String) -> String {
 #[post("/new_image", data = "<upload>")]
 async fn new_image(upload: Form<Upload<'_>>) -> String {
     //eprintln!("form: {:?}", upload);
-    HOST_PREFIX.to_owned() + &url::new_img(upload).await.unwrap()
+    IMG_HOST_PREFIX.to_owned() + &url::new_img(upload).await.unwrap()
 }
 
 /*

@@ -2,6 +2,7 @@
 address = "192.168.6.151"
 
 [debug]
+address = "127.0.0.1"
 port = 8193
 log_level = "debug"
 
