@@ -54,7 +54,7 @@ struct Img {
 }
 
 pub(crate) fn retrieve(short_url: String) -> Result<String> {
-    let conn = Connection::open("aqlink-testing.db")?;
+    let conn = Connection::open("aqlink.db")?;
 
     let mut stmt = conn.prepare("SELECT orig_url FROM urls WHERE short_url=:short_url LIMIT 1")?;
     let urls_iter = stmt.query_map(&[(":short_url", short_url.as_str())], |row| {
@@ -82,7 +82,7 @@ pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
         .to_string()
         .clone();
     //eprintln!("f without extension: {:?}", f_without_extension);
-    let conn = Connection::open("aqlink-testing.db")?;
+    let conn = Connection::open("aqlink.db")?;
     let mut stmt = conn
         .prepare("SELECT uuid, filetype, img FROM imgs WHERE uuid=:f_without_extension LIMIT 1")?;
     let imgs_iter = stmt.query_map(
@@ -110,7 +110,7 @@ pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
 }
 
 pub(crate) fn create_tables() -> Result<()> {
-    let conn = Connection::open("aqlink-testing.db")?;
+    let conn = Connection::open("aqlink.db")?;
 
     // need execute_batch or it runs only the first statement
     conn.execute_batch(
@@ -144,7 +144,7 @@ pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
         filetype: ctype.unwrap().to_string(),
     };
 
-    let conn = Connection::open("aqlink-testing.db")?;
+    let conn = Connection::open("aqlink.db")?;
     conn.execute(
         "INSERT INTO imgs (img, uuid, filetype) VALUES (?1, ?2, ?3)",
         (&ni.data, &ni.uuid, &ni.filetype),
@@ -178,7 +178,7 @@ pub(crate) fn new(orig_url: String) -> Result<String> {
         short_url,
     };
 
-    let conn = Connection::open("aqlink-testing.db")?;
+    let conn = Connection::open("aqlink.db")?;
 
     let mut stmt = conn.prepare("SELECT short_url FROM urls WHERE orig_url=:orig_url LIMIT 1")?;
     let urls_iter = stmt.query_map(&[(":orig_url", orig_url.as_str())], |row| {

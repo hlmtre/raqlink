@@ -7,8 +7,8 @@ use rocket::fs::{NamedFile, TempFile};
 use rocket::response::Redirect;
 
 const HOST_PREFIX: &str = "https://u.aql.ink/";
-//const IMG_HOST_PREFIX: &str = "https://u.aql.ink/i/";
-const IMG_HOST_PREFIX: &str = "http://localhost:8193/i/";
+const IMG_HOST_PREFIX: &str = "https://u.aql.ink/i/";
+//const IMG_HOST_PREFIX: &str = "http://localhost:8193/i/";
 
 #[derive(FromForm, Debug)]
 pub(crate) struct Upload<'r> {

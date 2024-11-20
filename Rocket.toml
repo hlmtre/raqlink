@@ -1,5 +1,7 @@
+
 [default]
 address = "192.168.6.151"
+limits = { form = "8192KiB", file = "8MiB" }
 
 [debug]
 address = "127.0.0.1"
