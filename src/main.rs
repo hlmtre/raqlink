@@ -3,11 +3,12 @@ extern crate rocket;
 mod url;
 
 use rocket::form::Form;
-use rocket::fs::TempFile;
+use rocket::fs::{NamedFile, TempFile};
 use rocket::response::Redirect;
 
 const HOST_PREFIX: &str = "https://u.aql.ink/";
-const IMG_HOST_PREFIX: &str = "https://u.aql.ink/i/";
+//const IMG_HOST_PREFIX: &str = "https://u.aql.ink/i/";
+const IMG_HOST_PREFIX: &str = "http://localhost:8193/i/";
 
 #[derive(FromForm, Debug)]
 pub(crate) struct Upload<'r> {
@@ -30,8 +31,10 @@ async fn new_image(upload: Form<Upload<'_>>) -> String {
   HAS TO BE A REDIRECT
 */
 #[get("/i/<uuid>")]
-fn retrieve_img(uuid: String) -> Redirect {
-    Redirect::to(url::retrieve_img(uuid).unwrap())
+async fn retrieve_img(uuid: String) -> Option<NamedFile> {
+    NamedFile::open(std::path::Path::new(&url::retrieve_img(uuid).unwrap()))
+        .await
+        .ok()
 }
 
 #[get("/<short_url>")]

@@ -8,7 +8,7 @@ use std::{borrow::Cow, path::Path};
 
 use rusqlite::{Connection, Result};
 
-const SAVE_LOCATION: &str = "./images/";
+const SAVE_LOCATION: &str = "/images/";
 const SHORT_URL_LEN: usize = 6;
 
 #[derive(Debug, Default)]
@@ -65,6 +65,7 @@ pub(crate) fn retrieve(short_url: String) -> Result<String> {
         })
     })?;
 
+    #[allow(clippy::never_loop)]
     for u in urls_iter {
         // we should return here whenever we have a url
         return Ok(u.unwrap().orig_url);
@@ -73,7 +74,7 @@ pub(crate) fn retrieve(short_url: String) -> Result<String> {
 }
 
 pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
-    //eprintln!("got uuid {:?}", uuid);
+    eprintln!("got uuid {:?}", uuid);
     let uuid_as_path = Path::new(&uuid);
     let f_without_extension = uuid_as_path
         .file_stem()
@@ -81,7 +82,7 @@ pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
         .to_string_lossy()
         .to_string()
         .clone();
-    //eprintln!("f without extension: {:?}", f_without_extension);
+    eprintln!("f without extension: {:?}", f_without_extension);
     let conn = Connection::open("aqlink-testing.db")?;
     let mut stmt = conn
         .prepare("SELECT uuid, filetype, img FROM imgs WHERE uuid=:f_without_extension LIMIT 1")?;
@@ -95,10 +96,16 @@ pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
             })
         },
     )?;
+    let cwd = std::env::current_dir().unwrap();
+    let cwd2 = cwd.to_string_lossy() + SAVE_LOCATION;
+    #[allow(clippy::never_loop)]
     for i in imgs_iter {
-        let x = i.unwrap().uuid.to_owned() + &file_extension("image/jpeg");
-        //eprintln!("x: {:?}", x);
-        return Ok(x);
+        let my_image = i.as_ref().unwrap().clone();
+        let final_destination = cwd2.into_owned()
+            + &my_image.uuid
+            + file_extension(my_image.filetype.as_str()).as_str();
+        eprintln!("final_destination: {:?}", final_destination);
+        return Ok(final_destination);
     }
     Ok("https://letmegooglethat.com/?q=404".to_string())
 }
@@ -132,12 +139,9 @@ pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
     let filename = String::from(SAVE_LOCATION) + &id;
     let ctype = form.image.content_type();
 
-    let i = read_file_to_bytes(form.image.path().unwrap().to_str().unwrap()).unwrap();
-    //eprintln!("i: {:?}", i);
-
     let ni = Img {
-        data: Some(i),
-        uuid: gen_random_string(SHORT_URL_LEN),
+        data: None,
+        uuid: id,
         filetype: ctype.unwrap().to_string(),
     };
 
@@ -146,7 +150,10 @@ pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
         "INSERT INTO imgs (img, uuid, filetype) VALUES (?1, ?2, ?3)",
         (&ni.data, &ni.uuid, &ni.filetype),
     )?;
-    let _ = form.image.move_copy_to(filename.clone()).await;
+    let cwd = std::env::current_dir().unwrap();
+    let cwd2 = cwd.to_string_lossy();
+    let final_destination = cwd2.into_owned() + &filename + file_extension(&ni.filetype).as_str();
+    let _r = form.image.move_copy_to(final_destination.clone()).await;
     Ok(ni.uuid + &file_extension(&ni.filetype))
 }
 
@@ -158,10 +165,7 @@ fn file_extension(c: &str) -> String {
     }
 }
 
-fn read_file_to_bytes(path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let byte_content = std::fs::read(path)?;
-    Ok(byte_content)
-}
+fn ensure_images_directory(target: &str) {}
 
 pub(crate) fn new(orig_url: String) -> Result<String> {
     let short_url = ShortUrl::new(SHORT_URL_LEN);
