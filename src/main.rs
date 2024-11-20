@@ -49,6 +49,16 @@ fn uh_oh() -> String {
 
 #[launch]
 fn rocket() -> _ {
+    let cwd = std::env::current_dir().unwrap();
+    let cwd2 = cwd.to_string_lossy() + url::SAVE_LOCATION;
+    let _g = url::ensure_images_directory(&cwd2);
+    match _g {
+        Ok(_) => (),
+        Err(e) => {
+            eprintln!("error ensuring image save directory {:?}", e);
+            std::process::exit(1);
+        }
+    }
     let f = url::create_tables();
     match f {
         Ok(_s) => _s,

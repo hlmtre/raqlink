@@ -2,13 +2,12 @@ extern crate rusqlite;
 use crate::Upload;
 use rand::{self, Rng};
 use rocket::form::Form;
-use rocket::fs::TempFile;
 use std::fmt;
 use std::{borrow::Cow, path::Path};
 
 use rusqlite::{Connection, Result};
 
-const SAVE_LOCATION: &str = "/images/";
+pub(crate) const SAVE_LOCATION: &str = "/images/";
 const SHORT_URL_LEN: usize = 6;
 
 #[derive(Debug, Default)]
@@ -74,7 +73,7 @@ pub(crate) fn retrieve(short_url: String) -> Result<String> {
 }
 
 pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
-    eprintln!("got uuid {:?}", uuid);
+    //eprintln!("got uuid {:?}", uuid);
     let uuid_as_path = Path::new(&uuid);
     let f_without_extension = uuid_as_path
         .file_stem()
@@ -82,7 +81,7 @@ pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
         .to_string_lossy()
         .to_string()
         .clone();
-    eprintln!("f without extension: {:?}", f_without_extension);
+    //eprintln!("f without extension: {:?}", f_without_extension);
     let conn = Connection::open("aqlink-testing.db")?;
     let mut stmt = conn
         .prepare("SELECT uuid, filetype, img FROM imgs WHERE uuid=:f_without_extension LIMIT 1")?;
@@ -104,7 +103,7 @@ pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
         let final_destination = cwd2.into_owned()
             + &my_image.uuid
             + file_extension(my_image.filetype.as_str()).as_str();
-        eprintln!("final_destination: {:?}", final_destination);
+        //eprintln!("final_destination: {:?}", final_destination);
         return Ok(final_destination);
     }
     Ok("https://letmegooglethat.com/?q=404".to_string())
@@ -165,7 +164,12 @@ fn file_extension(c: &str) -> String {
     }
 }
 
-fn ensure_images_directory(target: &str) {}
+pub(crate) fn ensure_images_directory(target: &str) -> std::io::Result<()> {
+    if !std::path::Path::new(&target).exists() {
+        std::fs::create_dir(target)?;
+    }
+    Ok(())
+}
 
 pub(crate) fn new(orig_url: String) -> Result<String> {
     let short_url = ShortUrl::new(SHORT_URL_LEN);
@@ -185,6 +189,7 @@ pub(crate) fn new(orig_url: String) -> Result<String> {
     })?;
 
     // if the orig_url already exists in the db, return just that short_url
+    #[allow(clippy::never_loop)]
     for u in urls_iter {
         return Ok(u.unwrap().orig_url);
     }
