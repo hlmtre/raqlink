@@ -8,6 +8,7 @@ use std::{borrow::Cow, path::Path};
 use rusqlite::{Connection, Result};
 
 pub(crate) const SAVE_LOCATION: &str = "/images/";
+pub(crate) const DATABASE_LOCATION: &str = "todo_db_here";
 const SHORT_URL_LEN: usize = 6;
 
 #[derive(Debug, Default)]
@@ -54,7 +55,7 @@ struct Img {
 }
 
 pub(crate) fn retrieve(short_url: String) -> Result<String> {
-    let conn = Connection::open("aqlink.db")?;
+    let conn = Connection::open(DATABASE_LOCATION)?;
 
     let mut stmt = conn.prepare("SELECT orig_url FROM urls WHERE short_url=:short_url LIMIT 1")?;
     let urls_iter = stmt.query_map(&[(":short_url", short_url.as_str())], |row| {
@@ -75,6 +76,7 @@ pub(crate) fn retrieve(short_url: String) -> Result<String> {
 pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
     //eprintln!("got uuid {:?}", uuid);
     let uuid_as_path = Path::new(&uuid);
+    // TODO clean this up
     let f_without_extension = uuid_as_path
         .file_stem()
         .unwrap()
@@ -82,7 +84,8 @@ pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
         .to_string()
         .clone();
     //eprintln!("f without extension: {:?}", f_without_extension);
-    let conn = Connection::open("aqlink.db")?;
+    let conn = Connection::open(DATABASE_LOCATION)?;
+    // TODO remove img binary instances/calls because we are storing images on the fs now
     let mut stmt = conn
         .prepare("SELECT uuid, filetype, img FROM imgs WHERE uuid=:f_without_extension LIMIT 1")?;
     let imgs_iter = stmt.query_map(
@@ -95,6 +98,7 @@ pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
             })
         },
     )?;
+    // more TODO here; figure out how to chain this or do it cleanly
     let cwd = std::env::current_dir().unwrap();
     let cwd2 = cwd.to_string_lossy() + SAVE_LOCATION;
     #[allow(clippy::never_loop)]
@@ -110,7 +114,7 @@ pub(crate) fn retrieve_img(uuid: String) -> Result<String> {
 }
 
 pub(crate) fn create_tables() -> Result<()> {
-    let conn = Connection::open("aqlink.db")?;
+    let conn = Connection::open(DATABASE_LOCATION)?;
 
     // need execute_batch or it runs only the first statement
     conn.execute_batch(
@@ -129,11 +133,6 @@ pub(crate) fn create_tables() -> Result<()> {
 }
 
 pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
-    /*
-    eprintln!("image: {:?}", form.image);
-    println!("ni = {:?}", ni);
-    */
-    // first get a random name
     let id = gen_random_string(SHORT_URL_LEN);
     let filename = String::from(SAVE_LOCATION) + &id;
     let ctype = form.image.content_type();
@@ -144,11 +143,12 @@ pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
         filetype: ctype.unwrap().to_string(),
     };
 
-    let conn = Connection::open("aqlink.db")?;
+    let conn = Connection::open(DATABASE_LOCATION)?;
     conn.execute(
         "INSERT INTO imgs (img, uuid, filetype) VALUES (?1, ?2, ?3)",
         (&ni.data, &ni.uuid, &ni.filetype),
     )?;
+    // more TODO this cleanly
     let cwd = std::env::current_dir().unwrap();
     let cwd2 = cwd.to_string_lossy();
     let final_destination = cwd2.into_owned() + &filename + file_extension(&ni.filetype).as_str();
@@ -157,6 +157,7 @@ pub(crate) async fn new_img(mut form: Form<Upload<'_>>) -> Result<String> {
 }
 
 fn file_extension(c: &str) -> String {
+    // TODO add more options here
     match c {
         "image/jpeg" => ".jpg".to_string(),
         "image/png" => ".png".to_string(),
@@ -178,7 +179,7 @@ pub(crate) fn new(orig_url: String) -> Result<String> {
         short_url,
     };
 
-    let conn = Connection::open("aqlink.db")?;
+    let conn = Connection::open(DATABASE_LOCATION)?;
 
     let mut stmt = conn.prepare("SELECT short_url FROM urls WHERE orig_url=:orig_url LIMIT 1")?;
     let urls_iter = stmt.query_map(&[(":orig_url", orig_url.as_str())], |row| {
