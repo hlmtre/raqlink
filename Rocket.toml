@@ -1,8 +1,13 @@
+
 [default]
 address = "192.168.6.151"
+limits = { form = "32MiB", file = "32MiB", body = "32MiB", data-form = "32MiB"}
 
 [debug]
-port = 8192
+address = "127.0.0.1"
+port = 8193
+log_level = "debug"
 
 [release]
 port = 8192
+log_level = "normal"
